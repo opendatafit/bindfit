@@ -1,10 +1,9 @@
 #!/usr/bin/env python
 
 import numpy as np
-
 import bindfit
-
 import pprint
+import pandas as pd
 
 
 # Parameters and options
@@ -25,16 +24,14 @@ dilute = False
 flavour = "none"
 
 # Load raw data
-data = np.genfromtxt("input.csv", delimiter=",", skip_header=1)
-# Bindfit expects each variable as rows
-data_x = np.transpose(data[:, :2])
-data_y = np.transpose(data[:, 2:])
+data = pd.read_csv("input.csv")
 
-# Apply dilution correction
-# TODO: Think about where this should go - fitter or function?
-# Or just apply it before the fit?
-if dilute:
-    data_y = bindfit.helpers.dilute(data_x[0], data_y)
+# Set index as per fitter
+data = data.set_index(["Host", "Guest"])
+
+# Dilution correction is already in fitter
+# if dilute:
+#    data_y = bindfit.helpers.dilute(data_x[0], data_y)
 
 function = bindfit.functions.construct(
     fitter_name,
@@ -43,7 +40,7 @@ function = bindfit.functions.construct(
 )
 
 fitter = bindfit.fitter.Fitter(
-    data_x, data_y, function, normalise=normalise, params=params
+    data, function, normalise=normalise, params=params
 )
 
 fitter.run_scipy(params, method=method)
@@ -64,9 +61,11 @@ summary = {
         "residuals": fitter.residuals,
         "ssr": bindfit.helpers.ssr(fitter.residuals),
         "rms": bindfit.helpers.rms(fitter.residuals),
-        "cov": bindfit.helpers.cov(data_y, fitter.residuals),
+        "cov": bindfit.helpers.cov(fitter.ydata, fitter.residuals),
         "rms_total": bindfit.helpers.rms(fitter.residuals, total=True),
-        "cov_total": bindfit.helpers.cov(data_y, fitter.residuals, total=True),
+        "cov_total": bindfit.helpers.cov(
+            fitter.ydata, fitter.residuals, total=True
+        ),
     },
     "time": fitter.time,
     "options": {
