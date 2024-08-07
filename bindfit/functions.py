@@ -380,7 +380,8 @@ def inhibitor_response(params, xdata, *args, **kwargs):
 
 
 def nmr_1to1(params, xdata, *args, **kwargs):
-    """Calculates predicted [HG] given data object parameters as input."""
+    """Calculates predicted [HG] given data object parameters
+    as input for NMR data."""
     k = params[0]
 
     h0 = xdata[0]
@@ -438,7 +439,7 @@ def uv_1to1(params, xdata, *args, **kwargs):
 
 def uv_1to2(params, xdata, flavour="none", *args, **kwargs):
     """Calculates predicted [HG] and [HG2] given data object and binding
-    constants as input.
+    constants as input for UV data.
     """
 
     k11 = params[0]
@@ -492,7 +493,7 @@ def uv_1to2(params, xdata, flavour="none", *args, **kwargs):
 
 def nmr_1to2(params, xdata, flavour="none", *args, **kwargs):
     """Calculates predicted [HG] and [HG2] given data object and binding
-    constants as input.
+    constants as input for NMR data.
     """
 
     k11 = params[0]
@@ -544,9 +545,68 @@ def nmr_1to2(params, xdata, flavour="none", *args, **kwargs):
     return hg_mat_fit, hg_mat
 
 
+def uv_1to3(params, xdata, flavour="none", *args, **kwargs):
+    """Calculates predicted [HG], [HG2], and [HG3] given data object and
+    binding constants as input for NMR data.
+    """
+
+    # Intialise Data
+    k11 = params[0]
+    if flavour == "noncoop":
+        k12 = k11 / 3
+        k13 = k11 / 9
+    else:
+        k12 = params[1]
+        k13 = params[2]
+
+    h0 = xdata[0]  # h0 in matlab code
+    g0 = xdata[1]  # g0 in matlab code
+
+    # Calculation of guest: Solve quartic
+    a = np.ones(h0.shape[0]) * k11 * k12 * k13
+    b = (k11 * k12) - (g0 * k11 * k12 * k13) + (3 * h0 * k11 * k12 * k13)
+    c = k11 - (g0 * k11 * k12) + (2 * h0 * k11 * k12)
+    d = 1 - (g0 * k11) + (h0 * k11)
+    e = -1.0 * g0
+
+    poly = np.column_stack((a, b, c, d, e))
+
+    g = np.zeros(h0.shape[0])
+    for i, p in enumerate(poly):
+        roots = np.roots(p)
+
+        # Smallest real +ve root is [G]
+        select = np.all([np.imag(roots) == 0, np.real(roots) >= 0], axis=0)
+        if select.any():
+            soln = roots[select].min()
+            soln = float(np.real(soln))
+        else:
+            # No positive real roots, set solution to 0
+            soln = 0.0
+
+        g[i] = soln
+
+    hg = (g * k11) / (
+        1 + (g * k11) + (g * g * k11 * k12) + (g * g * g * k11 * k12 * k13)
+    )
+    hg2 = (g * g * k11 * k12) / (
+        1 + (g * k11) + (g * g * k11 * k12) + (g * g * g * k11 * k12 * k13)
+    )
+    hg3 = (g * g * g * k11 * k12 * k13) / (
+        1 + (g * k11) + (g * g * k11 * k12) + (b * g * g * k11 * k12 * k13)
+    )
+
+    h = h0 - hg - hg2 - hg3
+
+    hg_mat_fit = np.vstack((h, hg, hg2, hg3))
+    hg_mat = np.vstack((h, hg, hg2, hg3))
+
+    return hg_mat_fit, hg_mat
+
+
 def nmr_2to1(params, xdata, flavour="none", *args, **kwargs):
     """Calculates predicted [HG] and [H2G] given data object and binding
-    constants as input.
+    constants as input for NMR data.
     """
     k11 = params[0]
     if flavour == "noncoop" or flavour == "stat":
@@ -601,7 +661,7 @@ def nmr_2to1(params, xdata, flavour="none", *args, **kwargs):
 
 def uv_2to1(params, xdata, flavour="none"):
     """Calculates predicted [HG] and [H2G] given data object and binding
-    constants as input.
+    constants as input for UV data.
     """
     # Convenience
     k11 = params[0]
@@ -627,6 +687,7 @@ def uv_2to1(params, xdata, flavour="none"):
 
     for i, p in enumerate(poly):
         roots = np.roots(p)
+
         # Smallest real +ve root is [H]
         select = np.all([np.imag(roots) == 0, np.real(roots) >= 0], axis=0)
         if select.any():
@@ -655,9 +716,75 @@ def uv_2to1(params, xdata, flavour="none"):
     return hg_mat_fit, hg_mat
 
 
+def uv_3to1(params, xdata, flavour="none", *args, **kwargs):
+    """Calculates predicted [HG], [H2G], and [H3G] given data object and
+    binding constants as input for UV data.
+    """
+
+    # Intialise Data
+    k11 = params[0]
+    if flavour == "noncoop":
+        k12 = k11 / 3
+        k13 = k11 / 9
+    else:
+        k12 = params[1]
+        k13 = params[2]
+
+    h0 = xdata[0]  # h0 in matlab code
+    g0 = xdata[1]  # g0 in matlab code
+
+    # Calculation of host: Solve quartic
+    a = np.ones(h0.shape[0]) * k11 * k12 * k13
+    b = (k11 * k12) - (g0 * k11 * k12 * k13) + (3 * h0 * k11 * k12 * k13)
+    c = k11 - (g0 * k11 * k12) + (2 * h0 * k11 * k12)
+    d = 1 - (g0 * k11) + (h0 * k11)
+    e = -1.0 * g0
+
+    poly = np.column_stack((a, b, c, d, e))
+
+    g = np.zeros(h0.shape[0])
+    for i, p in enumerate(poly):
+        roots = np.roots(p)
+
+        # Smallest real +ve root is [G]
+        select = np.all([np.imag(roots) == 0, np.real(roots) >= 0], axis=0)
+        if select.any():
+            soln = roots[select].min()
+            soln = float(np.real(soln))
+        else:
+            # No positive real roots, set solution to 0
+            soln = 0.0
+
+        g[i] = soln
+
+    hg = (
+        (1 / h0)
+        * (g * k11)
+        / (1 + (g * k11) + (g * g * k11 * k12) + (g * g * g * k11 * k12 * k13))
+    )
+    h2g = (
+        (1 / h0)
+        * (g * g * k11 * k12)
+        / (1 + (g * k11) + (g * g * k11 * k12) + (g * g * g * k11 * k12 * k13))
+    )
+    h3g = (
+        (1 / h0)
+        * (g * g * g * k11 * k12 * k13)
+        / (1 + (g * k11) + (g * g * k11 * k12) + (b * g * g * k11 * k12 * k13))
+    )
+
+    # We don't use h0 because NMR is chemical shift, UV is absorbance
+    h = h0 - hg - h2g - h3g
+
+    hg_mat_fit = np.vstack((h, hg, h2g, h3g))
+    hg_mat = np.vstack((h, hg, h2g, h3g))
+
+    return hg_mat_fit, hg_mat
+
+
 def nmr_dimer(params, xdata, *args, **kwargs):
     """Calculates predicted [H] [Hs] and [He] given data object and binding
-    constant as input.
+    constant as input for NMR data.
     """
     ke = params[0]
     h0 = xdata[0]
@@ -688,7 +815,7 @@ def nmr_dimer(params, xdata, *args, **kwargs):
 
 def uv_dimer(params, xdata, *args, **kwargs):
     """Calculates predicted [H] [Hs] and [He] given data object and binding
-    constant as input.
+    constant as input for UV data.
     """
     ke = params[0]
     h0 = xdata[0]
@@ -722,7 +849,7 @@ def uv_dimer(params, xdata, *args, **kwargs):
 
 def nmr_coek(params, xdata, *args, **kwargs):
     """Calculates predicted [H] [Hs] and [He] given data object and binding
-    constants as input.
+    constants as input for NMR data.
     """
     ke = params[0]
     rho = params[1]
@@ -771,7 +898,7 @@ def nmr_coek(params, xdata, *args, **kwargs):
 
 def uv_coek(params, xdata, *args, **kwargs):
     """Calculates predicted [H] [Hs] and [He] given data object and binding
-    constants as input.
+    constants as input for UV data.
     """
     ke = params[0]
     rho = params[1]
@@ -848,7 +975,9 @@ def construct(key, normalise=True, flavour="none"):
         "uvdata": ["FunctionBinding", (key)],
         "uv1to1": ["FunctionBinding", (key, uv_1to1, normalise, flavour)],
         "uv1to2": ["FunctionBinding", (key, uv_1to2, normalise, flavour)],
+        "uv1to3": ["FunctionBinding", (key, uv_1to3, normalise, flavour)],
         "uv2to1": ["FunctionBinding", (key, uv_2to1, normalise, flavour)],
+        "uv3to1": ["FunctionBinding", (key, uv_3to1, normalise, flavour)],
         "nmrdimer": ["FunctionAgg", (key, nmr_dimer, normalise, flavour)],
         "uvdimer": ["FunctionAgg", (key, uv_dimer, normalise, flavour)],
         "nmrcoek": ["FunctionAgg", (key, nmr_coek, normalise, flavour)],

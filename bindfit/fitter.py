@@ -74,7 +74,9 @@ class Fitter:
         "nmr_coek": ["H", "Hs", "He"],
         "uv_1to1": ["H", "HG"],
         "uv_1to2": ["H", "HG", "HG2"],
+        "uv_1to3": ["H", "HG", "HG2", "HG3"],
         "uv_2to1": ["H", "HG", "H2G"],
+        "uv_3to1": ["H", "HG", "H2G", "H3G"],
         "uv_dimer": ["H", "Hs", "He"],
         "uv_coek": ["H", "Hs", "He"],
     }
