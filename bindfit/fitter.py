@@ -69,7 +69,9 @@ class Fitter:
     MODEL_COEFFS_MAP = {
         "nmr_1to1": ["H", "HG"],
         "nmr_1to2": ["H", "HG", "HG2"],
+        "nmr_1to3": ["H", "HG", "HG2", "HG3"],
         "nmr_2to1": ["H", "HG", "H2G"],
+        "nmr_3to1": ["H", "HG", "H2G", "H3G"],
         "nmr_dimer": ["H", "Hs", "He"],
         "nmr_coek": ["H", "Hs", "He"],
         "uv_1to1": ["H", "HG"],
