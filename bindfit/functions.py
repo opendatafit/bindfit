@@ -616,15 +616,21 @@ def nmr_1to3(params, xdata, flavour="none", *args, **kwargs):
         k12 = params[1]
         k13 = params[2]
 
-    h0 = xdata[0]  # h0 in matlab code
-    g0 = xdata[1]  # g0 in matlab code
+    h0 = xdata[0]  #Host # htot in matlab code
+    g0 = xdata[1]  #Guest # ltot in matlab code
 
     # Calculation of guest: Solve quartic
     a = np.ones(h0.shape[0]) * k11 * k12 * k13
     b = (k11 * k12) - (g0 * k11 * k12 * k13) + (3 * h0 * k11 * k12 * k13)
     c = k11 - (g0 * k11 * k12) + (2 * h0 * k11 * k12)
-    d = 1 - (g0 * k11) + (h0 * k11)
+    d = 1 - (g0 * k11) + (h0 * k11) 
     e = -1.0 * g0
+
+    #a1 = (uu.*(K11.*K12.*K13));
+    #a2 = (uu.*((K11.*K12)-(Ltot.*K11.*K12.*K13)+(3.*htot.*K11.*K12.*K13)));
+    #a3 = (uu.*(K11-(Ltot.*K11.*K12)+(2.*htot.*K11.*K12)));
+    #a4 = (uu.*(1-(Ltot.*K11)+(htot.*K11)));
+    #a5 = (uu.*(-1.*Ltot));
 
     poly = np.column_stack((a, b, c, d, e))
 
@@ -643,15 +649,10 @@ def nmr_1to3(params, xdata, flavour="none", *args, **kwargs):
 
         g[i] = soln
 
-    hg = (g * k11) / (
-        1 + (g * k11) + (g * g * k11 * k12) + (g * g * g * k11 * k12 * k13)
-    )
-    hg2 = (g * g * k11 * k12) / (
-        1 + (g * k11) + (g * g * k11 * k12) + (g * g * g * k11 * k12 * k13)
-    )
-    hg3 = (g * g * g * k11 * k12 * k13) / (
-        1 + (g * k11) + (g * g * k11 * k12) + (b * g * g * k11 * k12 * k13)
-    )
+    denom = 1 + (g * k11) + (g * g * k11 * k12) + (g * g * g * k11 * k12 * k13)
+    hg = (g * k11) / (denom)
+    hg2 = (g * g * k11 * k12) / (denom)
+    hg3 = (g * g * g * k11 * k12 * k13) / (denom)
 
     # h0 in UV
     h = 1 - hg - hg2 - hg3
@@ -717,7 +718,6 @@ def nmr_2to1(params, xdata, flavour="none", *args, **kwargs):
     hg_mat = np.vstack((h, hg, h2g))
     return hg_mat_fit, hg_mat
 
-
 def nmr_3to1(params, xdata, flavour="none", *args, **kwargs):
     """Calculates predicted [HG], [H2G], and [H3G] given data object and
     binding constants as input.
@@ -737,14 +737,14 @@ def nmr_3to1(params, xdata, flavour="none", *args, **kwargs):
 
     # Calculation of host: Solve quartic
     a = np.ones(h0.shape[0]) * k11 * k12 * k13
-    b = (k11 * k12) - (g0 * k11 * k12 * k13) + (3 * h0 * k11 * k12 * k13)
-    c = k11 - (g0 * k11 * k12) + (2 * h0 * k11 * k12)
-    d = 1 - (g0 * k11) + (h0 * k11)
-    e = -1.0 * g0
+    b = (k11 * k12) + (3 * g0 * k11 * k12 * k13) - (h0 * k11 * k12 * k13) 
+    c = k11 + (2 * g0 * k11 * k12) - (h0 * k11 * k12)
+    d = 1 + (g0 * k11) - (h0 * k11)
+    e = -1.0 * h0
 
     poly = np.column_stack((a, b, c, d, e))
 
-    g = np.zeros(h0.shape[0])
+    h = np.zeros(h0.shape[0])
     for i, p in enumerate(poly):
         roots = np.roots(p)
 
@@ -757,32 +757,19 @@ def nmr_3to1(params, xdata, flavour="none", *args, **kwargs):
             # No positive real roots, set solution to 0
             soln = 0.0
 
-        g[i] = soln
+        h[i] = soln
 
-    hg = (
-        (1 / h0)
-        * (g * k11)
-        / (1 + (g * k11) + (g * g * k11 * k12) + (g * g * g * k11 * k12 * k13))
-    )
-    h2g = (
-        (1 / h0)
-        * (g * g * k11 * k12)
-        / (1 + (g * k11) + (g * g * k11 * k12) + (g * g * g * k11 * k12 * k13))
-    )
-    h3g = (
-        (1 / h0)
-        * (g * g * g * k11 * k12 * k13)
-        / (1 + (g * k11) + (g * g * k11 * k12) + (b * g * g * k11 * k12 * k13))
-    )
+    denom = 1 + (h * k11) + (h * h * k11 * k12) + (h * h * h * k11 * k12 * k13)
+    hg = (1 / h0) * (g0 * h * k11) / denom
+    h2g = (1 / h0) * (g0 * 2 * h * h * k11 * k12) / denom
+    h3g = (1 / h0) * (g0 * 3 * h * h * h * k11 * k12 * k13) / denom
 
-    # We don't use h0 because NMR is chemical shift, UV is absorbance
     h = 1 - hg - h2g - h3g
 
     hg_mat_fit = np.vstack((h, hg, h2g, h3g))
     hg_mat = np.vstack((h, hg, h2g, h3g))
 
     return hg_mat_fit, hg_mat
-
 
 def uv_2to1(params, xdata, flavour="none"):
     """Calculates predicted [HG] and [H2G] given data object and binding
