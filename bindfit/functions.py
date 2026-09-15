@@ -216,12 +216,23 @@ class BindingMixin:
             if rows == 1:
                 # 1:1 system
                 hg = h + coeffs[0]
+
                 return np.vstack((h, hg))
             elif rows == 2:
                 # 1:2 or 2:1 system
                 hg = h + coeffs[0]
                 hg2 = h + coeffs[1]
+
                 return np.vstack((h, hg, hg2))
+                
+            elif rows == 3:
+                # 1:3 system
+                hg = h + coeffs[0]
+                hg2 = h + coeffs[1]
+                hg3 = h + coeffs[2]
+
+                return np.vstack((h, hg, hg2, hg3))
+                
             else:
                 pass  # Throw error here
         else:
@@ -592,7 +603,7 @@ def uv_1to3(params, xdata, flavour="none", *args, **kwargs):
         1 + (g * k11) + (g * g * k11 * k12) + (g * g * g * k11 * k12 * k13)
     )
     hg3 = (g * g * g * k11 * k12 * k13) / (
-        1 + (g * k11) + (g * g * k11 * k12) + (b * g * g * k11 * k12 * k13)
+        1 + (g * k11) + (g * g * k11 * k12) + (g * g * g * k11 * k12 * k13)
     )
 
     h = h0 - hg - hg2 - hg3
@@ -616,8 +627,8 @@ def nmr_1to3(params, xdata, flavour="none", *args, **kwargs):
         k12 = params[1]
         k13 = params[2]
 
-    h0 = xdata[0]  # h0 in matlab code
-    g0 = xdata[1]  # g0 in matlab code
+    h0 = xdata[0]  #Host # htot in matlab code
+    g0 = xdata[1]  #Guest # ltot in matlab code
 
     # Calculation of guest: Solve quartic
     a = np.ones(h0.shape[0]) * k11 * k12 * k13
@@ -650,7 +661,7 @@ def nmr_1to3(params, xdata, flavour="none", *args, **kwargs):
         1 + (g * k11) + (g * g * k11 * k12) + (g * g * g * k11 * k12 * k13)
     )
     hg3 = (g * g * g * k11 * k12 * k13) / (
-        1 + (g * k11) + (g * g * k11 * k12) + (b * g * g * k11 * k12 * k13)
+        1 + (g * k11) + (g * g * k11 * k12) + (g * g * g * k11 * k12 * k13)
     )
 
     # h0 in UV
@@ -772,7 +783,7 @@ def nmr_3to1(params, xdata, flavour="none", *args, **kwargs):
     h3g = (
         (1 / h0)
         * (g * g * g * k11 * k12 * k13)
-        / (1 + (g * k11) + (g * g * k11 * k12) + (b * g * g * k11 * k12 * k13))
+        / (1 + (g * k11) + (g * g * k11 * k12) + (g * g * g * k11 * k12 * k13))
     )
 
     # We don't use h0 because NMR is chemical shift, UV is absorbance
@@ -894,7 +905,7 @@ def uv_3to1(params, xdata, flavour="none", *args, **kwargs):
     h3g = (
         (1 / h0)
         * (g * g * g * k11 * k12 * k13)
-        / (1 + (g * k11) + (g * g * k11 * k12) + (b * g * g * k11 * k12 * k13))
+        / (1 + (g * k11) + (g * g * k11 * k12) + (g * g * g * k11 * k12 * k13))
     )
 
     # We don't use h0 because NMR is chemical shift, UV is absorbance
